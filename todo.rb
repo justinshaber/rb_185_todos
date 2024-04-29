@@ -1,17 +1,20 @@
 # bundle exec ruby todo.rb -p $PORT -o $IP
 
 require 'sinatra'
-require 'sinatra/reloader' if development?
 require 'sinatra/content_for'
 require 'tilt/erubis'
 
-# require_relative 'session_persistance'
 require_relative 'database_persistance'
 
 configure do
   enable :sessions
   set :session_secret, SecureRandom.hex(32)
   set :erb, :escape_html => true
+end
+
+configure(:development) do
+  require 'sinatra/reloader'
+  also_reload './database_persistance.rb'
 end
 
 helpers do
@@ -141,11 +144,11 @@ end
 # Delete an entire todo list
 post "/lists/:list_id/delete" do
   list_id = params[:list_id].to_i
-  deleted_list = @storage.select_list(list_id)
+  deleted_list = @storage.find_list(list_id)
   
   @storage.delete_list(list_id)
-  
   session[:success] = "The list '#{deleted_list[:name]}' has been deleted."
+  
   if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
     "/lists"
   else
@@ -177,7 +180,7 @@ post "/lists/:list_id/todos/:todo_id/delete" do
   @current_list = load_list(@list_id)
 
   @storage.delete_todo_from_list(@list_id, @todo_id)
-
+  
   if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
     status 204
   else
@@ -192,8 +195,11 @@ post "/lists/:list_id/todos/:todo_id" do
   @todo_id = params[:todo_id].to_i
   @current_list = load_list(@list_id)
   change_status_to = params[:completed] == "true"
+  message = (change_status_to ? "checked off" : "unchecked")
+  
   
   @storage.update_todo_status(@list_id, @todo_id, change_status_to)
+  session[:success] = "The todo has been #{message}."
   redirect "/lists/#{@list_id}"
 end
 

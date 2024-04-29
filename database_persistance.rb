@@ -18,23 +18,23 @@ class DatabasePersistance
   end
   
   def create_new_list(list_name)
-    # id = next_item_id(@session[:lists]) 
-    # @session[:lists] << { id: id, name: list_name, todos: [] }
+    sql = "INSERT INTO lists (name) VALUES ($1)"
+    query(sql, list_name)
   end
   
   def create_new_todo(list_id, todo_name)
-    # list = find_list(list_id)
-    # id = next_item_id(list[:todos])
-    # list[:todos] << { id: id, name: todo_name, completed: false }
+    sql = "INSERT INTO todos (list_id, name) VALUES ($1, $2)"
+    query(sql, list_id, todo_name)
   end
   
   def delete_list(id)
-    # @session[:lists].reject! { |list| list[:id] == id }
+    query("DELETE FROM todos WHERE list_id = $1", id)
+    query("DELETE FROM lists WHERE id = $1", id)
   end
   
   def delete_todo_from_list(list_id, todo_id)
-    # list = find_list(list_id)
-    # list[:todos].reject! { |todo| todo[:id] == todo_id }
+    sql = "DELETE FROM todos WHERE list_id = $1 AND id = $2"
+    query(sql, list_id, todo_id)
   end
   
   def find_list(id)
@@ -49,29 +49,30 @@ class DatabasePersistance
   end
   
   def mark_all_todos_complete(list_id)
-    # list = find_list(list_id)
-    # list[:todos].each { |todo| todo[:completed] = true }
-  end
-  
-  def select_list(id)
-    # @session[:lists].select { |list| list[:id] == id }.first
+    sql = "UPDATE todos SET completed = true WHERE list_id = $1"
+    query(sql, list_id)
   end
   
   def update_list_name(id, new_name)
-    # list = find_list(id)
-    # list[:name] = new_name
+    sql = "UPDATE lists SET name = $1 WHERE id = $2"
+    query(sql, new_name, id)
   end
   
   def update_todo_status(list_id, todo_id, change_status_to)
-    # list = find_list(list_id)
-    # current_todo = list[:todos].select { |todo| todo[:id] == todo_id }.first
-    # toggle current_todo, change_status_to
+    sql = <<~SQL
+    UPDATE todos
+      SET completed = $1
+      WHERE list_id = $2 AND
+                 id = $3
+    SQL
+    
+    query(sql, change_status_to, list_id, todo_id)
   end
   
   private
   
   def find_todos_for_list(list_id)
-    todo_sql = "SELECT * from todos WHERE list_id = $1"
+    todo_sql = "SELECT * from todos WHERE list_id = $1 ORDER BY id"
     todos_result = query(todo_sql, list_id)
     
     todos_result.map do |todo_tuple|
@@ -85,15 +86,5 @@ class DatabasePersistance
   def query(statement, *params)
     @logger.info "#{statement}: #{params}"
     @db.exec_params(statement, params)
-  end
-  
-  def toggle(todo, status)
-    if status
-      todo[:completed] = true
-      @session[:success] = "The todo '#{todo[:name]}' has been checked off."
-    else
-      todo[:completed] = false
-      @session[:success] = "The todo '#{todo[:name]}' has been unchecked."
-    end
   end
 end
