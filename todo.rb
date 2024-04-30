@@ -18,23 +18,16 @@ configure(:development) do
 end
 
 helpers do
-  def completed?(todo)
+  def todo_class(todo)
     "complete" if todo[:completed]
+  end
+  
+  def list_class(list)
+    "complete" if list_completed?(list)
   end
 
   def list_completed?(list)
-    "complete" if count_incomplete_todos(list) == 0 &&
-                    count_total_todos(list) > 0
-  end
-
-  def count_incomplete_todos(list)
-    list[:todos].reduce(0) do |total, todo|
-      !todo[:completed] ? total + 1 : total
-    end
-  end
-
-  def count_total_todos(list)
-    list[:todos].size
+    list[:todos_count] > 0 && list[:todos_remaining_count] == 0
   end
 
   def sort_lists(list, &block)
@@ -132,8 +125,8 @@ end
 # View a todo list
 get "/lists/:list_id" do
   @list_id = params[:list_id].to_i
-  
   @current_list = load_list(@list_id)
+  @todos = @storage.find_todos_for_list(@list_id)
   erb :single_list, layout: :layout
 end
 

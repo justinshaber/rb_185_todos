@@ -1,4 +1,4 @@
-<section id="todos" class="<%= list_completed? @current_list %>">
+<section id="todos" class="<%= list_class @current_list %>">
   <header>
     <h2><%= @current_list[:name] %></h2>
     <ul>
@@ -14,8 +14,8 @@
   </header>
 
   <ul>
-    <% sort_todos(@current_list[:todos]) do |todo| %>
-      <li class="<%= completed?(todo) %>">
+    <% sort_todos(@todos) do |todo| %>
+      <li class="<%= todo_class todo %>">
           <form action="/lists/<%= @list_id %>/todos/<%= todo[:id] %>" method="post" class="check">
             <input type="hidden" name="completed" value="<%= !todo[:completed] %>" />
             <button type="submit">Complete</button>
